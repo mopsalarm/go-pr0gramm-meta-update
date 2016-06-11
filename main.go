@@ -12,6 +12,7 @@ import (
 	"github.com/robfig/cron"
 	"github.com/vistarmedia/go-datadog"
 	"os"
+	"net/http"
 )
 
 func main() {
@@ -38,6 +39,9 @@ func main() {
 	if *datadog != "" {
 		startMetricsWithDatadog(*datadog)
 	}
+
+	// if we have such a slow connection, servers are fucked up.
+	http.DefaultClient.Timeout = 10 * time.Second
 
 	scheduleUpdateFunctions(db)
 
