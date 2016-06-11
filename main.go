@@ -11,8 +11,8 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/robfig/cron"
 	"github.com/vistarmedia/go-datadog"
-	"os"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -72,12 +72,12 @@ func scheduleUpdateFunctions(db *sql.DB) {
 
 func startMetricsWithDatadog(apiKey string) {
 	metrics.RegisterRuntimeMemStats(metrics.DefaultRegistry)
-	go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 10)
+	go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 1*time.Minute)
 
 	host, _ := os.Hostname()
 
 	fmt.Printf("Starting datadog reporter on host %s\n", host)
-	go datadog.New(host, apiKey).DefaultReporter().Start(10)
+	go datadog.New(host, apiKey).DefaultReporter().Start(1 * time.Minute)
 }
 
 func must(err error) {
