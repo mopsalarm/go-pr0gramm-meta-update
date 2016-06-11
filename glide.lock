@@ -1,0 +1,22 @@
+hash: 59b3624b8e22f44c23f174bda56e8f8fb903dc61da36dd20eaf0ffec477c3e0c
+updated: 2016-06-11T20:57:47.264215+02:00
+imports:
+- name: github.com/lib/pq
+  version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
+  subpackages:
+  - oid
+- name: github.com/mopsalarm/go-pr0gramm
+  version: de6f1c6a5320d7a667da7ab077f801471eb71972
+- name: github.com/rcrowley/go-metrics
+  version: eeba7bd0dd01ace6e690fa833b3f22aaec29af43
+- name: github.com/robfig/cron
+  version: 6f2e8282a1a0d694e55a48ce7d077ee46747feeb
+- name: github.com/Sirupsen/logrus
+  version: f3cfb454f4c209e6668c95216c4744b8fddb2356
+- name: github.com/vistarmedia/go-datadog
+  version: d05578420bfaf173df31fc00580f57b904df6222
+- name: golang.org/x/sys
+  version: 7f918dd405547ecb864d14a8ecbbfe205b5f930f
+  subpackages:
+  - unix
+devImports: []

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/mopsalarm/go-pr0gramm"
+	"github.com/rcrowley/go-metrics"
 )
 
 func Update(db *sql.DB, maxItemAge time.Duration) {
@@ -22,7 +23,7 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 		}))
 
 	if err != nil {
-		logrus.WithError(err).Warn("Could not fetch all items");
+		logrus.WithError(err).Warn("Could not fetch all items")
 	}
 
 	if len(items) == 0 {
@@ -61,11 +62,13 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 
 		if err != nil {
 			logrus.WithError(err).Warn("Could not insert item into database, skipping.")
+		} else {
+			metrics.GetOrRegisterMeter("pr0gramm.meta.items.inserted", nil).Mark(1)
 		}
 	}
 
 	logrus.
-	WithField("duration", time.Since(start)).
+		WithField("duration", time.Since(start)).
 		WithField("count", len(items)).
 		Info("Finished writing items")
 }

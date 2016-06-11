@@ -1,3 +1,5 @@
 *.iml
 /.idea
 /go-pr0gramm-meta-update
+
+/vendor
