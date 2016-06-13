@@ -1,12 +1,12 @@
-hash: 59b3624b8e22f44c23f174bda56e8f8fb903dc61da36dd20eaf0ffec477c3e0c
-updated: 2016-06-11T20:57:47.264215+02:00
+hash: 2ab7468b5a8c50d24c5782b6e321af98bcbec12dbd8bcb274ac480aa98148827
+updated: 2016-06-13T20:50:12.228616+02:00
 imports:
 - name: github.com/lib/pq
   version: ee1442bda7bd1b6a84e913bdb421cb1874ec629d
   subpackages:
   - oid
 - name: github.com/mopsalarm/go-pr0gramm
-  version: de6f1c6a5320d7a667da7ab077f801471eb71972
+  version: d627666aa9f6031c7851844fbe04efbf9c62fee1
 - name: github.com/rcrowley/go-metrics
   version: eeba7bd0dd01ace6e690fa833b3f22aaec29af43
 - name: github.com/robfig/cron

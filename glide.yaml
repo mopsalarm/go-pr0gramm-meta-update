@@ -3,6 +3,7 @@ import:
 - package: github.com/Sirupsen/logrus
 - package: github.com/lib/pq
 - package: github.com/mopsalarm/go-pr0gramm
+  version: master
 - package: github.com/robfig/cron
 - package: github.com/rcrowley/go-metrics
 - package: github.com/vistarmedia/go-datadog
