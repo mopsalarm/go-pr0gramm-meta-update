@@ -9,6 +9,14 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+func UpdateAll(db *sql.DB) error {
+	return pr0gramm.StreamPaged(pr0gramm.NewItemsRequest(), func(items []pr0gramm.Item) (bool, error) {
+		writeItems(db, items)
+		time.Sleep(10 * time.Second)
+		return true, nil
+	})
+}
+
 func Update(db *sql.DB, maxItemAge time.Duration) {
 	logrus.WithField("max-age", maxItemAge).Info("Updating items now")
 
@@ -30,6 +38,9 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 		return
 	}
 
+	writeItems(db, items)
+}
+func writeItems(db *sql.DB, items []pr0gramm.Item) {
 	tx, err := db.Begin()
 	if err != nil {
 		logrus.WithError(err).Warn("Could not open transction")

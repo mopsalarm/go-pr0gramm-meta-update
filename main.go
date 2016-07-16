@@ -18,6 +18,8 @@ import (
 func main() {
 	postgres := flag.String("postgres", "host=localhost user=postgres password=password dbname=postgres sslmode=disable", "Postgres connection string or url")
 	datadog := flag.String("datadog", "", "Datadog api key for metrics reporter")
+	updateAll := flag.Bool("all", false, "Update everything (slowly)")
+
 	flag.Parse()
 
 	db, err := sql.Open("postgres", *postgres)
@@ -43,7 +45,13 @@ func main() {
 	// if we have such a slow connection, servers are fucked up.
 	http.DefaultClient.Timeout = 10 * time.Second
 
-	scheduleUpdateFunctions(db)
+	if *updateAll {
+		// update everything
+		UpdateAll(db)
+
+	} else {
+		scheduleUpdateFunctions(db)
+	}
 
 	// wait forever.
 	<-make(chan bool)
