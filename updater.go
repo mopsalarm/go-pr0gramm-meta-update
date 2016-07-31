@@ -50,9 +50,9 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 	defer tx.Commit()
 
 	statement, err := tx.Prepare(`INSERT INTO items
-		(id, promoted,up, down, created, image, thumb, fullsize, source, flags, username, mark, width, height, audio)
+		(id, promoted, up, down, created, image, thumb, fullsize, source, flags, username, mark, width, height, audio)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-		ON CONFLICT (id) DO UPDATE SET up=EXCLUDED.up, down=EXCLUDED.down`)
+		ON CONFLICT (id) DO UPDATE SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark`)
 
 	if err != nil {
 		logrus.WithError(err).Warn("Could not prepare insert statement")
