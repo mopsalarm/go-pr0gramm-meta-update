@@ -13,6 +13,8 @@ import (
 	"github.com/vistarmedia/go-datadog"
 	"net/http"
 	"os"
+	"sync/atomic"
+	"github.com/mopsalarm/go-pr0gramm"
 )
 
 func main() {
@@ -29,7 +31,7 @@ func main() {
 	}
 
 	defer db.Close()
-	db.SetMaxOpenConns(2)
+	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
@@ -47,7 +49,19 @@ func main() {
 
 	if *updateAll {
 		// update everything
-		UpdateAll(db)
+		request := pr0gramm.NewItemsRequest()
+
+		for {
+			id, err := UpdateAll(db, request);
+			if err == nil {
+				break
+			}
+
+			logrus.WithError(err).WithField("id", id).Warn("Error updating items")
+			request.Older = id - pr0gramm.Id(1)
+
+			time.Sleep(20*time.Second)
+		}
 
 	} else {
 		scheduleUpdateFunctions(db)
@@ -57,22 +71,40 @@ func main() {
 	<-make(chan bool)
 }
 
+func limitConcurrency(fn func()) func() {
+	var guard int32
+	return func() {
+		if atomic.CompareAndSwapInt32(&guard, 0, 1) {
+			defer atomic.StoreInt32(&guard, 0)
+			fn()
+		}
+	}
+}
+
 func scheduleUpdateFunctions(db *sql.DB) {
 	c := cron.New()
-	must(c.AddFunc("@every 10m", func() {
-		Update(db, 6*time.Hour)
-	}))
+	must(c.AddFunc("@every 1m", limitConcurrency(func() {
+		Update(db, time.Hour)
+	})))
 
-	must(c.AddFunc("@hourly", func() {
-		Update(db, 24*time.Hour)
-	}))
+	must(c.AddFunc("@every 10m", limitConcurrency(func() {
+		Update(db, 6 * time.Hour)
+	})))
 
-	must(c.AddFunc("@every 3h", func() {
-		Update(db, 7*24*time.Hour)
-	}))
+	must(c.AddFunc("@hourly", limitConcurrency(func() {
+		Update(db, 24 * time.Hour)
+	})))
+
+	must(c.AddFunc("@every 3h", limitConcurrency(func() {
+		Update(db, 7 * 24 * time.Hour)
+	})))
+
+	must(c.AddFunc("@every 15s", limitConcurrency(func() {
+		UpdateTags(db)
+	})))
 
 	// update "today" once
-	Update(db, 24*time.Hour)
+	Update(db, 24 * time.Hour)
 
 	// start update cycle
 	c.Start()
@@ -80,7 +112,7 @@ func scheduleUpdateFunctions(db *sql.DB) {
 
 func startMetricsWithDatadog(apiKey string) {
 	metrics.RegisterRuntimeMemStats(metrics.DefaultRegistry)
-	go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 1*time.Minute)
+	go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 1 * time.Minute)
 
 	host, _ := os.Hostname()
 
