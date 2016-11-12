@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	_ "github.com/lib/pq"
+	"github.com/mopsalarm/go-pr0gramm"
 	"github.com/rcrowley/go-metrics"
 	"github.com/robfig/cron"
 	"github.com/vistarmedia/go-datadog"
 	"net/http"
 	"os"
 	"sync/atomic"
-	"github.com/mopsalarm/go-pr0gramm"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 		request := pr0gramm.NewItemsRequest()
 
 		for {
-			id, err := UpdateAll(db, request);
+			id, err := UpdateAll(db, request)
 			if err == nil {
 				break
 			}
@@ -60,7 +60,7 @@ func main() {
 			logrus.WithError(err).WithField("id", id).Warn("Error updating items")
 			request.Older = id - pr0gramm.Id(1)
 
-			time.Sleep(20*time.Second)
+			time.Sleep(20 * time.Second)
 		}
 
 	} else {
@@ -88,15 +88,15 @@ func scheduleUpdateFunctions(db *sql.DB) {
 	})))
 
 	must(c.AddFunc("@every 10m", limitConcurrency(func() {
-		Update(db, 6 * time.Hour)
+		Update(db, 6*time.Hour)
 	})))
 
 	must(c.AddFunc("@hourly", limitConcurrency(func() {
-		Update(db, 24 * time.Hour)
+		Update(db, 24*time.Hour)
 	})))
 
 	must(c.AddFunc("@every 3h", limitConcurrency(func() {
-		Update(db, 7 * 24 * time.Hour)
+		Update(db, 7*24*time.Hour)
 	})))
 
 	must(c.AddFunc("@every 15s", limitConcurrency(func() {
@@ -104,7 +104,7 @@ func scheduleUpdateFunctions(db *sql.DB) {
 	})))
 
 	// update "today" once
-	Update(db, 24 * time.Hour)
+	Update(db, 24*time.Hour)
 
 	// start update cycle
 	c.Start()
@@ -112,7 +112,7 @@ func scheduleUpdateFunctions(db *sql.DB) {
 
 func startMetricsWithDatadog(apiKey string) {
 	metrics.RegisterRuntimeMemStats(metrics.DefaultRegistry)
-	go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 1 * time.Minute)
+	go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 1*time.Minute)
 
 	host, _ := os.Hostname()
 

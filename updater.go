@@ -4,15 +4,15 @@ import (
 	"database/sql"
 	"time"
 
+	"encoding/json"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/mopsalarm/go-pr0gramm"
 	"github.com/rcrowley/go-metrics"
-	"net/http"
-	"fmt"
 	"io/ioutil"
-	"encoding/json"
-	"unicode/utf8"
+	"net/http"
 	"strings"
+	"unicode/utf8"
 )
 
 type tagWithItemId struct {
@@ -24,7 +24,7 @@ func UpdateAll(db *sql.DB, request pr0gramm.ItemsRequest) (pr0gramm.Id, error) {
 	var lastProcessedId pr0gramm.Id
 	err := pr0gramm.StreamPaged(request, func(items []pr0gramm.Item) (bool, error) {
 		if len(items) > 0 {
-			lastProcessedId = items[len(items) - 1].Id
+			lastProcessedId = items[len(items)-1].Id
 		}
 
 		writeItems(db, items)
@@ -98,7 +98,7 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 	}
 
 	logrus.
-	WithField("duration", time.Since(start)).
+		WithField("duration", time.Since(start)).
 		WithField("count", len(items)).
 		Info("Finished writing items")
 }
@@ -116,7 +116,7 @@ func UpdateTags(db *sql.DB) (tagCount int) {
 
 	var largestTagId uint64
 
-	row := tx.QueryRow("SELECT COALESCE(MAX(id), 0) FROM tags");
+	row := tx.QueryRow("SELECT COALESCE(MAX(id), 0) FROM tags")
 	if err := row.Scan(&largestTagId); err != nil {
 		logrus.WithError(err).Error("Could not get the value of the largest known tag-id")
 		return
@@ -168,7 +168,7 @@ func UpdateTags(db *sql.DB) (tagCount int) {
 
 		logrus.WithField("count", len(decoded.Tags)).Info("Will dump tags to database.")
 		for _, tag := range decoded.Tags {
-			if utf8.ValidString(tag.Tag) && ! strings.ContainsRune(tag.Tag, 0) {
+			if utf8.ValidString(tag.Tag) && !strings.ContainsRune(tag.Tag, 0) {
 				_, err = tagStmt.Exec(tag.Id, tag.ItemId, tag.Up, tag.Down, tag.Confidence, tag.Tag)
 
 				if err != nil {
@@ -181,10 +181,9 @@ func UpdateTags(db *sql.DB) (tagCount int) {
 	}
 
 	logrus.
-	WithField("duration", time.Since(start)).
+		WithField("duration", time.Since(start)).
 		WithField("count", len(decoded.Tags)).
 		Info("Finished writing tags")
 
 	return len(decoded.Tags)
 }
-
