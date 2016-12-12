@@ -81,30 +81,41 @@ func limitConcurrency(fn func()) func() {
 	}
 }
 
+func printUpdateTime(title string, startTime time.Time) {
+	logrus.Infof("Update '%s' took %s", title, time.Since(startTime))
+}
+
 func scheduleUpdateFunctions(db *sql.DB) {
 	c := cron.New()
-	must(c.AddFunc("@every 1m", limitConcurrency(func() {
-		Update(db, time.Hour)
-	})))
-
-	must(c.AddFunc("@every 10m", limitConcurrency(func() {
+	must(c.AddFunc("30 * * * *", limitConcurrency(func() {
+		defer printUpdateTime("6h every minute", time.Now())
 		Update(db, 6*time.Hour)
 	})))
 
-	must(c.AddFunc("@hourly", limitConcurrency(func() {
-		Update(db, 24*time.Hour)
+	must(c.AddFunc("0 */15 * * *", limitConcurrency(func() {
+		defer printUpdateTime("2d every 15min", time.Now())
+		Update(db, 48*time.Hour)
 	})))
 
-	must(c.AddFunc("@every 3h", limitConcurrency(func() {
+	// once every hour (on +25m)
+	must(c.AddFunc("0 25 * * *", limitConcurrency(func() {
+		defer printUpdateTime("3d every hour", time.Now())
 		Update(db, 7*24*time.Hour)
+	})))
+
+	// once a day (on +50m) we go back for a month
+	must(c.AddFunc("0 50 4 * *", limitConcurrency(func() {
+		defer printUpdateTime("30d every day", time.Now())
+		Update(db, 30*24*time.Hour)
 	})))
 
 	must(c.AddFunc("@every 15s", limitConcurrency(func() {
 		UpdateTags(db)
 	})))
 
-	// update "today" once
-	Update(db, 24*time.Hour)
+	// update the past two days once
+	defer printUpdateTime("2d now", time.Now())
+	Update(db, 48*time.Hour)
 
 	// start update cycle
 	c.Start()
