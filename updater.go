@@ -166,7 +166,7 @@ func UpdateTags(db *sql.DB) int {
 		return 0
 	}
 
-	url := fmt.Sprintf("http://pr0gramm.com/api/tags/latest?id=%d", largestTagId-1000)
+	url := fmt.Sprintf("http://pr0gramm.com/api/tags/latest?id=%d", largestTagId)
 	logrus.WithField("url", url).Info("Fetching tags from remote api now")
 
 	response, err := http.Get(url)
