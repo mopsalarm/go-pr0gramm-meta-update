@@ -23,8 +23,15 @@ type tagWithItemId struct {
 func UpdateAll(db *sql.DB, request pr0gramm.ItemsRequest) (pr0gramm.Id, error) {
 	var lastProcessedId pr0gramm.Id
 	err := pr0gramm.StreamPaged(request, func(items []pr0gramm.Item) (bool, error) {
-		if len(items) > 0 {
-			lastProcessedId = items[len(items)-1].Id
+
+		for _, item := range items {
+			if lastProcessedId > 0 {
+				for id := lastProcessedId - 1; id > item.Id; id-- {
+					deleteItem(db, id)
+				}
+			}
+
+			lastProcessedId = item.Id
 		}
 
 		writeItems(db, items)
@@ -38,13 +45,25 @@ func UpdateAll(db *sql.DB, request pr0gramm.ItemsRequest) (pr0gramm.Id, error) {
 func Update(db *sql.DB, maxItemAge time.Duration) {
 	logrus.WithField("max-age", maxItemAge).Info("Updating items now")
 
-	var items []pr0gramm.Item
+	var lastItemId pr0gramm.Id
+
+	var deleteQueue []pr0gramm.Id
+	var updateQueue []pr0gramm.Item
+
 	err := pr0gramm.Stream(pr0gramm.NewItemsRequest(), pr0gramm.ConsumeIf(
 		func(item pr0gramm.Item) bool {
+			if lastItemId > 0 {
+				for id := lastItemId - 1; id > item.Id; id-- {
+					deleteQueue = append(deleteQueue, item.Id)
+				}
+			}
+
+			lastItemId = item.Id
+
 			return time.Since(item.Created.Time).Seconds() < maxItemAge.Seconds()
 		},
 		func(item pr0gramm.Item) error {
-			items = append(items, item)
+			updateQueue = append(updateQueue, item)
 			return nil
 		}))
 
@@ -52,11 +71,37 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 		logrus.WithError(err).Warn("Could not fetch all items")
 	}
 
-	if len(items) == 0 {
+	if len(deleteQueue) > 0 {
+		logrus.Infof("Ensure that %d out of %d items are absent", len(deleteQueue), len(updateQueue))
+		for _, itemId := range deleteQueue {
+			deleteItem(db, itemId)
+		}
+	}
+
+	if len(updateQueue) == 0 {
 		return
 	}
 
-	writeItems(db, items)
+	writeItems(db, updateQueue)
+}
+
+func deleteItem(db *sql.DB, itemId pr0gramm.Id) {
+	tx, err := db.Begin()
+	if err != nil {
+		logrus.WithError(err).Warn("Could not open transction")
+		return
+	}
+
+	defer tx.Commit()
+
+	if res, err := tx.Exec("DELETE FROM items WHERE id=$1", int(itemId)); err != nil {
+		logrus.Warnf("Could not delete item %d from database", itemId)
+		return
+	} else {
+		if affected, _ := res.RowsAffected(); affected > 0 {
+			logrus.Infof("Item %d was deleted from database", int(itemId))
+		}
+	}
 }
 
 func writeItems(db *sql.DB, items []pr0gramm.Item) {
@@ -71,7 +116,8 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 	itemStmt, err := tx.Prepare(`INSERT INTO items
 		(id, promoted, up, down, created, image, thumb, fullsize, source, flags, username, mark, width, height, audio)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-		ON CONFLICT (id) DO UPDATE SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark`)
+		ON CONFLICT (id) DO UPDATE SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark
+		WHERE items.up!=EXCLUDED.up OR items.down!=EXCLUDED.down OR items.promoted!=EXCLUDED.promoted OR items.mark!= EXCLUDED.mark`)
 
 	if err != nil {
 		logrus.WithError(err).Warn("Could not prepare insert statement")
