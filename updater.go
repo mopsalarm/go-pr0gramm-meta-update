@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/lib/pq"
 	"github.com/mopsalarm/go-pr0gramm"
 	"github.com/rcrowley/go-metrics"
 	"io/ioutil"
@@ -27,7 +28,7 @@ func UpdateAll(db *sql.DB, request pr0gramm.ItemsRequest) (pr0gramm.Id, error) {
 		for _, item := range items {
 			if lastProcessedId > 0 {
 				for id := lastProcessedId - 1; id > item.Id; id-- {
-					deleteItem(db, id)
+					deleteItems(db, id)
 				}
 			}
 
@@ -54,7 +55,7 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 		func(item pr0gramm.Item) bool {
 			if lastItemId > 0 {
 				for id := lastItemId - 1; id > item.Id; id-- {
-					deleteQueue = append(deleteQueue, item.Id)
+					deleteQueue = append(deleteQueue, id)
 				}
 			}
 
@@ -73,9 +74,7 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 
 	if len(deleteQueue) > 0 {
 		logrus.Infof("Ensure that %d out of %d items are absent", len(deleteQueue), len(updateQueue))
-		for _, itemId := range deleteQueue {
-			deleteItem(db, itemId)
-		}
+		deleteItems(db, deleteQueue...)
 	}
 
 	if len(updateQueue) == 0 {
@@ -85,7 +84,7 @@ func Update(db *sql.DB, maxItemAge time.Duration) {
 	writeItems(db, updateQueue)
 }
 
-func deleteItem(db *sql.DB, itemId pr0gramm.Id) {
+func deleteItems(db *sql.DB, itemIds ...pr0gramm.Id) {
 	tx, err := db.Begin()
 	if err != nil {
 		logrus.WithError(err).Warn("Could not open transction")
@@ -94,13 +93,12 @@ func deleteItem(db *sql.DB, itemId pr0gramm.Id) {
 
 	defer tx.Commit()
 
-	if res, err := tx.Exec("DELETE FROM items WHERE id=$1", int(itemId)); err != nil {
-		logrus.Warnf("Could not delete item %d from database", itemId)
+	if res, err := tx.Exec("DELETE FROM items WHERE id=ANY($1)", pq.GenericArray{A: itemIds}); err != nil {
+		logrus.Warnf("Could not delete %d items from database", len(itemIds))
 		return
 	} else {
-		if affected, _ := res.RowsAffected(); affected > 0 {
-			logrus.Infof("Item %d was deleted from database", int(itemId))
-		}
+		affected, _ := res.RowsAffected()
+		logrus.Infof("%d items were deleted from database", affected)
 	}
 }
 
@@ -149,13 +147,13 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 		Info("Finished writing items")
 }
 
-func UpdateTags(db *sql.DB) (tagCount int) {
+func UpdateTags(db *sql.DB) int {
 	start := time.Now()
 
 	tx, err := db.Begin()
 	if err != nil {
 		logrus.WithError(err).Error("Could not create transaction to update tags")
-		return
+		return 0
 	}
 
 	defer tx.Commit()
@@ -165,16 +163,16 @@ func UpdateTags(db *sql.DB) (tagCount int) {
 	row := tx.QueryRow("SELECT COALESCE(MAX(id), 0) FROM tags")
 	if err := row.Scan(&largestTagId); err != nil {
 		logrus.WithError(err).Error("Could not get the value of the largest known tag-id")
-		return
+		return 0
 	}
 
-	url := fmt.Sprintf("http://pr0gramm.com/api/tags/latest?id=%d", largestTagId)
+	url := fmt.Sprintf("http://pr0gramm.com/api/tags/latest?id=%d", largestTagId-1000)
 	logrus.WithField("url", url).Info("Fetching tags from remote api now")
 
 	response, err := http.Get(url)
 	if err != nil {
 		logrus.WithError(err).Error("Request to get the latest tags failed.")
-		return
+		return 0
 	}
 
 	defer func() {
@@ -195,7 +193,7 @@ func UpdateTags(db *sql.DB) (tagCount int) {
 
 	if err := json.NewDecoder(response.Body).Decode(&decoded); err != nil {
 		logrus.WithError(err).Error("Could not decode response")
-		return
+		return 0
 	}
 
 	if len(decoded.Tags) > 0 {
@@ -203,11 +201,12 @@ func UpdateTags(db *sql.DB) (tagCount int) {
 		(id, item_id, up, down, confidence, tag)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (id) DO UPDATE
-		SET up=EXCLUDED.up, down=EXCLUDED.down, confidence=EXCLUDED.confidence`)
+		SET up=EXCLUDED.up, down=EXCLUDED.down, confidence=EXCLUDED.confidence
+		WHERE tags.up!=EXCLUDED.up OR tags.down!=EXCLUDED.down`)
 
 		if err != nil {
 			logrus.WithError(err).Error("Could not prepare statement")
-			return
+			return 0
 		}
 
 		defer tagStmt.Close()
