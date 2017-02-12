@@ -21,6 +21,7 @@ func main() {
 	postgres := flag.String("postgres", "host=localhost user=postgres password=password dbname=postgres sslmode=disable", "Postgres connection string or url")
 	datadog := flag.String("datadog", "", "Datadog api key for metrics reporter")
 	updateAll := flag.Bool("all", false, "Update everything (slowly)")
+	updateStart := flag.Int("start-at", 0, "Specifiy the post number to start at when doing the complete import.")
 
 	flag.Parse()
 
@@ -51,14 +52,19 @@ func main() {
 		// update everything
 		request := pr0gramm.NewItemsRequest()
 
+		if *updateStart > 0 {
+			request.Older = pr0gramm.Id(*updateStart)
+		}
+
 		for {
+			logrus.Infof("Starting at id=%d", request.Older)
 			id, err := UpdateAll(db, request)
 			if err == nil {
 				break
 			}
 
 			logrus.WithError(err).WithField("id", id).Warn("Error updating items")
-			request.Older = id - pr0gramm.Id(1)
+			request.Older = id - 1
 
 			time.Sleep(20 * time.Second)
 		}

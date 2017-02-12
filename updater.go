@@ -22,17 +22,21 @@ type tagWithItemId struct {
 }
 
 func UpdateAll(db *sql.DB, request pr0gramm.ItemsRequest) (pr0gramm.Id, error) {
-	var lastProcessedId pr0gramm.Id
+	var lastProcessedId pr0gramm.Id = request.Older
 	err := pr0gramm.StreamPaged(request, func(items []pr0gramm.Item) (bool, error) {
-
+		var deleteQueue []pr0gramm.Id
 		for _, item := range items {
 			if lastProcessedId > 0 {
 				for id := lastProcessedId - 1; id > item.Id; id-- {
-					deleteItems(db, id)
+					deleteQueue = append(deleteQueue, id)
 				}
 			}
 
 			lastProcessedId = item.Id
+		}
+
+		if len(deleteQueue) > 0 {
+			deleteItems(db, deleteQueue...)
 		}
 
 		writeItems(db, items)
