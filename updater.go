@@ -116,9 +116,10 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 	defer tx.Commit()
 
 	itemStmt, err := tx.Prepare(`INSERT INTO items
-		(id, promoted, up, down, created, image, thumb, fullsize, source, flags, username, mark, width, height, audio)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-		ON CONFLICT (id) DO UPDATE SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark
+		(id, promoted, up, down, created, image, thumb, fullsize, source, flags, username, mark, width, height, audio, updated)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+		ON CONFLICT (id) DO UPDATE
+			SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark, updated=EXCLUDED.updated
 		WHERE items.up!=EXCLUDED.up OR items.down!=EXCLUDED.down OR items.promoted!=EXCLUDED.promoted OR items.mark!= EXCLUDED.mark`)
 
 	if err != nil {
@@ -136,7 +137,8 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 			item.Up, item.Down,
 			item.Created.Time.Unix(),
 			item.Image, item.Thumbnail, item.Fullsize, item.Source,
-			item.Flags, item.User, item.Mark, item.Width, item.Height, item.Audio)
+			item.Flags, item.User, item.Mark, item.Width, item.Height, item.Audio,
+			time.Now().UTC())
 
 		if err != nil {
 			logrus.WithError(err).Warn("Could not insert item into database, skipping.")

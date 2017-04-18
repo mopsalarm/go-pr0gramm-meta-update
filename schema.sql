@@ -2,6 +2,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS items (
   id       INT PRIMARY KEY NOT NULL,
+  updated  TIMESTAMP       NOT NULL,
   promoted INT             NOT NULL,
   up       INT             NOT NULL,
   down     INT             NOT NULL,
@@ -46,6 +47,8 @@ CREATE INDEX IF NOT EXISTS items__created_ts
 CREATE INDEX items__promoted
   ON items (promoted)
   WHERE items.promoted > 0;
+
+CREATE INDEX items__updated ON items(updated);
 
 -- not used right now
 -- CREATE INDEX IF NOT EXISTS items__username ON items(lower(username));
