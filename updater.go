@@ -6,7 +6,7 @@ import (
 
 	"encoding/json"
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/lib/pq"
 	"github.com/mopsalarm/go-pr0gramm"
 	"github.com/rcrowley/go-metrics"
@@ -119,8 +119,8 @@ func writeItems(db *sql.DB, items []pr0gramm.Item) {
 		(id, promoted, up, down, created, image, thumb, fullsize, source, flags, username, mark, width, height, audio, updated)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 		ON CONFLICT (id) DO UPDATE
-			SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark, updated=EXCLUDED.updated
-		WHERE items.up!=EXCLUDED.up OR items.down!=EXCLUDED.down OR items.promoted!=EXCLUDED.promoted OR items.mark!= EXCLUDED.mark`)
+			SET up=EXCLUDED.up, down=EXCLUDED.down, promoted=EXCLUDED.promoted, mark=EXCLUDED.mark, updated=EXCLUDED.updated, flags=EXCLUDED.flags
+		WHERE items.up!=EXCLUDED.up OR items.down!=EXCLUDED.down OR items.promoted!=EXCLUDED.promoted OR items.mark!=EXCLUDED.mark OR items.flags!=EXCLUDED.flags`)
 
 	if err != nil {
 		logrus.WithError(err).Warn("Could not prepare insert statement")

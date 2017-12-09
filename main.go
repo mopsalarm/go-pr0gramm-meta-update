@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	_ "github.com/lib/pq"
 	"github.com/mopsalarm/go-pr0gramm"
 	"github.com/rcrowley/go-metrics"

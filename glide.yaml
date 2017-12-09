@@ -1,8 +1,9 @@
 package: github.com/mopsalarm/go-pr0gramm-meta-update
 import:
 - package: github.com/Sirupsen/logrus
-  version: ~0.11.0
+  version: 1.0.3
 - package: github.com/lib/pq
+  version: 83612a56d3dd153a94a629cd64925371c9adad78
 - package: github.com/mopsalarm/go-pr0gramm
   version: ~1.0.0
 - package: github.com/rcrowley/go-metrics
